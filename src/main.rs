@@ -4,10 +4,7 @@ use winit::event::{Event, WindowEvent};
 mod editor;
 mod engine;
 
-use engine::core::{
-	renderer::{self, Renderer},
-	window,
-};
+use engine::core::{renderer::Renderer, window};
 
 fn main() {
 	// Create editor main window
@@ -15,12 +12,7 @@ fn main() {
 		window::create(&Vector2::new(800, 600), "Corrosive Editor".to_string());
 
 	// Create Vulkan renderer
-	let renderer = match Renderer::new() {
-		Ok(n) => n,
-		Err(e) => {
-			panic!("Renderer creation unsuccesful: {}", e);
-		}
-	};
+	let renderer = Renderer::default();
 
 	// Main execution loop
 	event_loop.run(move |event, _, control_flow| {
