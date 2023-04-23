@@ -8,6 +8,7 @@ use vulkano::{
 		DeviceCreateInfo,
 		Queue,
 		QueueCreateInfo,
+		QueueFlags,
 	},
 	instance::{Instance, InstanceCreateInfo},
 	VulkanLibrary,
@@ -15,11 +16,11 @@ use vulkano::{
 
 #[derive(Debug)]
 pub struct Renderer {
-	instance: Arc<Instance>,
-	physical_devices: Vec<Arc<PhysicalDevice>>,
-	active_physical_device: Arc<PhysicalDevice>,
-	logical_device: Arc<Device>,
-	queues: Vec<Arc<Queue>>,
+	pub instance: Arc<Instance>,
+	pub physical_devices: Vec<Arc<PhysicalDevice>>,
+	pub active_physical_device: Arc<PhysicalDevice>,
+	pub logical_device: Arc<Device>,
+	pub queues: Vec<Arc<Queue>>,
 }
 
 impl Renderer {
@@ -120,7 +121,11 @@ impl Renderer {
 	fn select_queue_families(active_physical_device: &Arc<PhysicalDevice>) -> Result<Vec<u32>, String> {
 		// The indices of all queue families we want to include in our application
 		let mut requested_queue_families: Vec<u32> = vec![];
-		// All the queue family features that we have covered with our currently requested queue families
+		// Featured covered by our included queue flags:
+		// - graphics
+		// - compute
+		// - transfer
+		// - sparse binding
 		let mut covered_flags = [false, false, false, false];
 
 		for (f_index, family) in active_physical_device
@@ -129,22 +134,23 @@ impl Renderer {
 			.enumerate()
 		{
 			let q_flags = family.queue_flags;
-			let q_flags = [
-				q_flags.graphics,
-				q_flags.compute,
-				q_flags.transfer,
-				q_flags.sparse_binding,
-			];
+
 			// Should we add the current family to the list of requested ones
 			let mut shall_add = false;
 			// Iterate through all queue family features
-			for (covered, current) in covered_flags.iter_mut().zip(q_flags.iter()) {
-				// The current queue family shall be added if it provides features that were not covered before
-				if !*covered && *current {
-					*covered = true;
+			let flags = [
+				q_flags.contains(QueueFlags::GRAPHICS),
+				q_flags.contains(QueueFlags::COMPUTE),
+				q_flags.contains(QueueFlags::TRANSFER),
+				q_flags.contains(QueueFlags::SPARSE_BINDING),
+			];
+			for (covered_flag, flag) in covered_flags.iter_mut().zip(flags) {
+				if !*covered_flag && flag {
+					*covered_flag = true;
 					shall_add = true;
 				}
 			}
+
 			if shall_add { requested_queue_families.push(f_index as u32); }
 		}
 
@@ -183,31 +189,16 @@ impl Renderer {
 		Ok((device, queues))
 	}
 
-	/// Select queue
-	/// TODO: Come up with strategy on how many queues to use and why
-	fn select_queue(queues: &Vec<Arc<Queue>>) -> Result<Arc<Queue>, String> {
-		let queue = match queues.len() {
-			0 => {
-				return Err("selected queue family empty".to_string());
-			}
-			_ => queues[0].clone(),
-		};
-		Ok(queue)
-	}
-
 	#[cfg(debug_assertions)]
 	pub fn print_physical_devices(&self) {
 		for (d_index, device) in self.physical_devices.iter().enumerate() {
 			println!("{:?}. {:?}:", d_index + 1, device.properties().device_name);
 			for (q_index, family) in device.queue_family_properties().iter().enumerate() {
 				println!("\t{:?}. Queue:", q_index + 1);
-				println!("\t\tGraphics:\t{:?}", family.queue_flags.graphics);
-				println!("\t\tCompute:\t{:?}", family.queue_flags.compute);
-				println!("\t\tTransfer:\t{:?}", family.queue_flags.transfer);
-				println!(
-					"\t\tSparse Binding:\t{:?}",
-					family.queue_flags.sparse_binding
-				);
+				println!("\t\tGraphics:\t{:?}", family.queue_flags.contains(QueueFlags::GRAPHICS));
+				println!("\t\tCompute:\t{:?}", family.queue_flags.contains(QueueFlags::COMPUTE));
+				println!("\t\tTransfer:\t{:?}", family.queue_flags.contains(QueueFlags::TRANSFER));
+				println!("\t\tSparse Binding:\t{:?}", family.queue_flags.contains(QueueFlags::SPARSE_BINDING));
 				println!("\tQueue count: {:?}", family.queue_count);
 			}
 			println!();
