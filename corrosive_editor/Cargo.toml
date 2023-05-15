@@ -1,0 +1,10 @@
+[package]
+name = "editor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+corrosive_engine = { path = "../corrosive_engine" }
+winit = "0.28.3"
+wgpu = "0.16.0"
+pollster = "0.3.0"
