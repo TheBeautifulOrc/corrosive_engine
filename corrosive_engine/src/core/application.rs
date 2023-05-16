@@ -29,4 +29,12 @@ impl Application {
 		self.window.set_inner_size(*new_dimensions);
 		self.renderer.resize(new_dimensions);
 	}
+
+	pub fn update(&mut self) {
+
+	}
+
+	pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+		self.renderer.render()
+	}
 }

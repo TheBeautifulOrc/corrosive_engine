@@ -50,8 +50,29 @@ fn main() {
 					}
 				}
 			}
-			Event::MainEventsCleared => app.window().request_redraw(),
-			Event::RedrawRequested(_) => {}
+			Event::MainEventsCleared => {
+				app.window().request_redraw()
+			},
+			Event::RedrawRequested(window_id) if window_id == app.window().id() => {
+				app.update();
+				match app.render() {
+					Ok(_) => {}
+					// Reconfigure surface if it is lost
+					Err(wgpu::SurfaceError::Lost) => {
+						let win = app.window();
+						let current_size: LogicalSize<u32> = win.inner_size().to_logical(win.scale_factor());
+						app.resize(&current_size);
+					}
+					// Quit if system memory is depleted
+					Err(wgpu::SurfaceError::OutOfMemory) => {
+						control_flow.set_exit();
+					}
+					// Print other errors (should resolve by themselves)
+					Err(e) => {
+						eprintln!("{:?}", e);
+					}
+				}
+			}
 			_ => {}
 		}
 	});
