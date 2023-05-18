@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 winit = "0.28.3"
 wgpu = "0.16.0"
+pollster = "0.3.0"
