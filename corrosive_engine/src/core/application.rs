@@ -1,21 +1,18 @@
-use std::error::Error;
 use std::default::Default;
+use std::error::Error;
 
 use winit::{
 	dpi::LogicalSize,
-	event::{
-		WindowEvent,
-		Event
-	},
+	event::{Event, WindowEvent},
+	event_loop::EventLoop,
 	window::Window,
-	event_loop::EventLoop
 };
 
 use pollster;
 
+use super::error;
 use super::renderer::Renderer;
 use super::window;
-use super::error;
 
 pub struct Application {
 	event_loop: Option<EventLoop<()>>,
@@ -29,7 +26,7 @@ impl Application {
 		Application {
 			event_loop: Some(event_loop),
 			window: window,
-			renderer: renderer
+			renderer: renderer,
 		}
 	}
 }
@@ -41,7 +38,8 @@ impl Default for Application {
 			&LogicalSize::new(800, 600),
 			"Corrosive Application".to_string(),
 			&event_loop,
-		).unwrap();
+		)
+		.unwrap();
 		pollster::block_on(Self::new(event_loop, window))
 	}
 }
@@ -56,9 +54,6 @@ impl Application {
 		self
 	}
 
-	pub fn window(&self) -> &Window {
-		&self.window
-	}
 
 	pub fn processed(&self, _event: &WindowEvent) -> bool {
 		false
@@ -74,13 +69,11 @@ impl Application {
 
 	pub fn update(&mut self) {}
 
-	pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-		self.renderer.render()
-	}
-
 	pub fn run(mut self) -> Result<(), Box<dyn Error>> {
 		// Make sure the event loop is present, otherwise terminate
-		if self.event_loop.is_none() { return Err(error::EngineError::EventLoopElapsed.into()); }
+		if self.event_loop.is_none() {
+			return Err(error::EngineError::EventLoopElapsed.into());
+		}
 
 		// Remove event loop from application to correctly call run function
 		let event_loop = self.event_loop.take().unwrap();
@@ -92,7 +85,7 @@ impl Application {
 				Event::WindowEvent {
 					ref event,
 					window_id,
-				} if window_id == self.window().id() => {
+				} if window_id == self.window.id() => {
 					if !self.processed(event) {
 						match event {
 							WindowEvent::CloseRequested => {
@@ -100,7 +93,7 @@ impl Application {
 							}
 							WindowEvent::Resized(physical_size) => {
 								let ls: LogicalSize<u32> =
-									physical_size.to_logical(self.window().scale_factor());
+									physical_size.to_logical(self.window.scale_factor());
 								self.resize(&ls);
 							}
 							WindowEvent::ScaleFactorChanged {
@@ -114,14 +107,14 @@ impl Application {
 						}
 					}
 				}
-				Event::MainEventsCleared => self.window().request_redraw(),
-				Event::RedrawRequested(window_id) if window_id == self.window().id() => {
+				Event::MainEventsCleared => self.window.request_redraw(),
+				Event::RedrawRequested(window_id) if window_id == self.window.id() => {
 					self.update();
-					match self.render() {
+					match self.renderer.render() {
 						Ok(_) => {}
 						// Reconfigure surface if it is lost
 						Err(wgpu::SurfaceError::Lost) => {
-							let win = self.window();
+							let win = &self.window;
 							let current_size: LogicalSize<u32> =
 								win.inner_size().to_logical(win.scale_factor());
 							self.resize(&current_size);
