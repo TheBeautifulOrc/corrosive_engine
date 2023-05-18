@@ -30,9 +30,7 @@ impl Application {
 		self.renderer.resize(new_dimensions);
 	}
 
-	pub fn update(&mut self) {
-
-	}
+	pub fn update(&mut self) {}
 
 	pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
 		self.renderer.render()
