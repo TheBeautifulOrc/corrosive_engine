@@ -1,4 +1,8 @@
+use wgpu::util::DeviceExt;
+
 use winit::{dpi::LogicalSize, window::Window};
+
+use super::geometry;
 
 pub struct Renderer {
 	surface: wgpu::Surface,
@@ -6,6 +10,7 @@ pub struct Renderer {
 	queue: wgpu::Queue,
 	config: wgpu::SurfaceConfiguration,
 	render_pipeline: wgpu::RenderPipeline,
+	vertex_buffer: wgpu::Buffer,
 }
 
 impl Renderer {
@@ -76,7 +81,9 @@ impl Renderer {
 			vertex: wgpu::VertexState {
 				module: &shader,
 				entry_point: "vs_main",
-				buffers: &[],
+				buffers: &[
+					geometry::Vertex::desc(),
+				],
 			},
 			fragment: Some(wgpu::FragmentState {
 				module: &shader,
@@ -105,12 +112,21 @@ impl Renderer {
 			multiview: None,
 		});
 
+		let vertex_buffer = device.create_buffer_init(
+			&wgpu::util::BufferInitDescriptor {
+				label: Some("Vertex Buffer"),
+				contents: bytemuck::cast_slice(geometry::VERTICES),
+				usage: wgpu::BufferUsages::VERTEX,
+			}
+		);
+
 		Self {
 			surface,
 			device,
 			queue,
 			config,
 			render_pipeline,
+			vertex_buffer,
 		}
 	}
 
@@ -152,7 +168,8 @@ impl Renderer {
 		});
 
 		render_pass.set_pipeline(&self.render_pipeline);
-		render_pass.draw(0..3, 0..1);
+		render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+		render_pass.draw(0..geometry::VERTICES.len() as u32, 0..1);
 
 		drop(render_pass);
 
