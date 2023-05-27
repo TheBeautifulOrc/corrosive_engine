@@ -11,6 +11,7 @@ pub struct Renderer {
 	config: wgpu::SurfaceConfiguration,
 	render_pipeline: wgpu::RenderPipeline,
 	vertex_buffer: wgpu::Buffer,
+	index_buffer: wgpu::Buffer,
 }
 
 impl Renderer {
@@ -47,8 +48,7 @@ impl Renderer {
 			.formats
 			.iter()
 			.copied()
-			.filter(|f| f.is_srgb())
-			.next()
+			.find(|f| f.is_srgb())
 			.unwrap_or(surface_caps.formats[0]);
 		let config = wgpu::SurfaceConfiguration {
 			usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -120,6 +120,14 @@ impl Renderer {
 			}
 		);
 
+		let index_buffer = device.create_buffer_init(
+			&wgpu::util::BufferInitDescriptor {
+				label: Some("Index Buffer"),
+				contents: bytemuck::cast_slice(geometry::INDICES),
+				usage: wgpu::BufferUsages::INDEX,
+			}
+		);
+
 		Self {
 			surface,
 			device,
@@ -127,6 +135,7 @@ impl Renderer {
 			config,
 			render_pipeline,
 			vertex_buffer,
+			index_buffer,
 		}
 	}
 
@@ -169,7 +178,8 @@ impl Renderer {
 
 		render_pass.set_pipeline(&self.render_pipeline);
 		render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-		render_pass.draw(0..geometry::VERTICES.len() as u32, 0..1);
+		render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+		render_pass.draw_indexed(0..geometry::INDICES.len() as u32, 0,0..1);
 
 		drop(render_pass);
 

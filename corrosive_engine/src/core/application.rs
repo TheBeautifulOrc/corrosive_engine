@@ -1,5 +1,4 @@
 use std::default::Default;
-use std::error::Error;
 
 use winit::{
 	dpi::LogicalSize,
@@ -25,8 +24,8 @@ impl Application {
 		let renderer = Renderer::new(&window).await;
 		Application {
 			event_loop: Some(event_loop),
-			window: window,
-			renderer: renderer,
+			window,
+			renderer,
 		}
 	}
 }
@@ -69,7 +68,7 @@ impl Application {
 
 	pub fn update(&mut self) {}
 
-	pub fn run(mut self) -> Result<(), Box<dyn Error>> {
+	pub fn run(mut self) -> Result<(), anyhow::Error> {
 		// Make sure the event loop is present, otherwise terminate
 		if self.event_loop.is_none() {
 			return Err(error::EngineError::EventLoopElapsed.into());

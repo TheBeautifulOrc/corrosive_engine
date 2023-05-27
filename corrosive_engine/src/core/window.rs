@@ -1,5 +1,3 @@
-use std::error;
-
 use winit::{
 	dpi::LogicalSize,
 	event_loop::EventLoop,
@@ -12,7 +10,7 @@ pub fn create(
 	dimensions: &LogicalSize<u32>,
 	name: String,
 	event_loop: &EventLoop<()>,
-) -> Result<Window, Box<dyn error::Error>> {
+) -> Result<Window, anyhow::Error> {
 	if !dimensions_valid(dimensions) {
 		Err(EngineError::DimensionError)?
 	}
