@@ -20,6 +20,12 @@ pub struct Application {
 }
 
 impl Application {
+	/// Initializes new `Application`.
+	///
+	/// # Arguments
+	///
+	/// - `event_loop` - Event loop that this application will use to coordinate windows and application flow
+	/// - `window` - Window this application uses to present on
 	pub async fn new(event_loop: EventLoop<()>, window: Window) -> Application {
 		let renderer = Renderer::new(&window).await;
 		Application {
@@ -31,6 +37,7 @@ impl Application {
 }
 
 impl Default for Application {
+	/// Initializes new `Application` with default values.
 	fn default() -> Self {
 		let event_loop = EventLoop::new();
 		let window = window::create(
@@ -44,21 +51,39 @@ impl Default for Application {
 }
 
 impl Application {
+	/// Renames the application.
+	///
+	/// # Arguments
+	///
+	/// - `new_title` - New title of the application
 	pub fn rename(&mut self, new_title: &str) {
 		self.window.set_title(new_title);
 	}
 
+	/// Returns the application with a new name.
+	/// Usefull when creating new applciations.
+	///
+	/// # Arguments
+	///
+	/// - `new_title` - New title of the application
+	///
+	/// # Example
+	///
+	/// ```
+	/// use corrosive_engine::core::application::Application;
+	/// let app = Application::default().with_name("Application Name");
+	/// ```
 	pub fn with_name(mut self, new_title: &str) -> Self {
 		self.rename(new_title);
 		self
 	}
 
 
-	pub fn processed(&self, _event: &WindowEvent) -> bool {
+	fn processed(&self, _event: &WindowEvent) -> bool {
 		false
 	}
 
-	pub fn resize(&mut self, new_dimensions: &LogicalSize<u32>) {
+	fn resize(&mut self, new_dimensions: &LogicalSize<u32>) {
 		if !window::dimensions_valid(new_dimensions) {
 			return;
 		}
@@ -66,9 +91,24 @@ impl Application {
 		self.renderer.resize(new_dimensions);
 	}
 
-	pub fn update(&mut self) {}
+	fn update(&mut self) {}
 
-	pub fn run(mut self) -> Result<(), anyhow::Error> {
+	/// Runs the application.
+	/// The following behaviour is implemented by default:
+	/// - Closing the window if requested by the OS
+	/// - Resizing the window if requested by the OS
+	/// - Adapting to changed scale factor (e.g. if the window is dragged to a different dpi screen)
+	/// - Redrawing the window contents regularly
+	///
+	/// # Arguments
+	///
+	/// - `event_handler` - A function that takes a `&winit::event::Event` as input. You may react to it as you see fit.
+	/// - `high_performance_mode` - Should the application poll continuously for new events (only set to true if latency is critical)
+	pub fn run(
+		mut self,
+		event_handler: fn(&Event<()>),
+		high_performance_mode: bool,
+	) -> Result<(), anyhow::Error> {
 		// Make sure the event loop is present, otherwise terminate
 		if self.event_loop.is_none() {
 			return Err(error::EngineError::EventLoopElapsed.into());
@@ -78,8 +118,16 @@ impl Application {
 		let event_loop = self.event_loop.take().unwrap();
 		// Run event loop
 		event_loop.run(move |event, _, control_flow| {
-			control_flow.set_wait();
+			if high_performance_mode {
+				control_flow.set_poll();
+			} else {
+				control_flow.set_wait();
+			}
 
+			// User-defined event-handling
+			event_handler(&event);
+
+			// Engine internal event handling
 			match event {
 				Event::WindowEvent {
 					ref event,
@@ -130,6 +178,39 @@ impl Application {
 				}
 				_ => {}
 			}
+		});
+	}
+
+	/// Runs the application without pre-defined event handling
+	/// (like closing software or resizing windows).
+	///
+	/// Should only be used if necessary, usually `Application::run` is more desirable.
+	///
+	/// # Arguments
+	///
+	/// - `event_handler` - A function that takes a `&winit::event::Event` as input. You may react to it as you see fit.
+	/// - `high_performance_mode` - Should the application poll continuously for new events (only set to true if latency is critical)
+	pub fn run_no_overhead(&mut self,
+		event_handler: fn(&Event<()>),
+		high_performance_mode: bool,
+	) -> Result<(), anyhow::Error> {
+		// Make sure the event loop is present, otherwise terminate
+		if self.event_loop.is_none() {
+			return Err(error::EngineError::EventLoopElapsed.into());
+		}
+
+		// Remove event loop from application to correctly call run function
+		let event_loop = self.event_loop.take().unwrap();
+		// Run event loop
+		event_loop.run(move |event, _, control_flow| {
+			if high_performance_mode {
+				control_flow.set_poll();
+			} else {
+				control_flow.set_wait();
+			}
+
+			// User-defined event-handling
+			event_handler(&event);
 		});
 	}
 }
